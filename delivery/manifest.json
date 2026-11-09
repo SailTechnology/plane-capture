@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "repository": "SailTechnology/plane-capture",
+  "release_tag": "v2026.11.09",
+  "platform": "Windows-x64",
+  "created": "2026-11-09T20:22:45",
+  "components": [
+    {
+      "id": "control",
+      "archive_relative": "01_控制地面站/PlaneCapture-Station-v31.2-OSD-Windows-x64.zip",
+      "extract_into": "01_控制地面站",
+      "top_directory": "地面站_v31.2_OSD完整程序",
+      "archive_bytes": 338025505,
+      "archive_sha256": "b4b8517cb2a3e506e5bd3a2e36d3cc0246ad18cc788732125e32333e625061f9",
+      "unpacked_bytes": 425345016,
+      "entries": 2199,
+      "parts": [
+        {
+          "asset": "01-control-v31.2.zip",
+          "bytes": 338025505,
+          "sha256": "b4b8517cb2a3e506e5bd3a2e36d3cc0246ad18cc788732125e32333e625061f9"
+        }
+      ]
+    },
+    {
+      "id": "mechanical",
+      "archive_relative": "02_机械设计/机械设计包_20261109.zip",
+      "extract_into": "02_机械设计",
+      "top_directory": "机械设计包_20261109",
+      "archive_bytes": 709044013,
+      "archive_sha256": "3431d64739f5603328972286276402d3b6a6c228cd104f5409bdb03a867848ef",
+      "unpacked_bytes": 1902629466,
+      "entries": 10899,
+      "parts": [
+        {
+          "asset": "02-mechanical-v8.zip",
+          "bytes": 709044013,
+          "sha256": "3431d64739f5603328972286276402d3b6a6c228cd104f5409bdb03a867848ef"
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "archive_relative": "03_原理算法与过程资料/过程资料包_20261109_精简.zip",
+      "extract_into": "03_原理算法与过程资料",
+      "top_directory": "过程资料包_20261109",
+      "archive_bytes": 5815796466,
+      "archive_sha256": "bbe6786f953df117132bf8147e36e8512ea6638ef7f17dc17723be593fb13757",
+      "unpacked_bytes": 14037469633,
+      "entries": 145004,
+      "parts": [
+        {
+          "asset": "03-research-process.zip.part01",
+          "bytes": 1073741824,
+          "sha256": "0c0c64d23d40bde83f3ea76ab67401ecb3197335caff8984b46334565e1fb7b7"
+        },
+        {
+          "asset": "03-research-process.zip.part02",
+          "bytes": 1073741824,
+          "sha256": "4aba9165e14b7f3b1221c423723adfa08939fec1a09e0696a6165b4b0cf88702"
+        },
+        {
+          "asset": "03-research-process.zip.part03",
+          "bytes": 1073741824,
+          "sha256": "3d51086007b5f0dd423420e3d35b7b22ad34199db93a3d6280f779e4aa3d95e7"
+        },
+        {
+          "asset": "03-research-process.zip.part04",
+          "bytes": 1073741824,
+          "sha256": "fc61926085d814f9b691c9752a120a1e8e3432ea2bfdf17eb6a736e3e42c33d8"
+        },
+        {
+          "asset": "03-research-process.zip.part05",
+          "bytes": 1073741824,
+          "sha256": "0ba66b37f6e4e62914cd41024d29fb63904b31e571347406706a03c23242e827"
+        },
+        {
+          "asset": "03-research-process.zip.part06",
+          "bytes": 447087346,
+          "sha256": "9317bfcb2015d452770bdd95d2fbf6ce438cf47fcbc6f4c62456582b91afc873"
+        }
+      ]
+    },
+    {
+      "id": "simulation",
+      "archive_relative": "03_原理算法与过程资料/仿真Demo与SimToReal对照_20261109.zip",
+      "extract_into": "03_原理算法与过程资料",
+      "top_directory": "仿真Demo与SimToReal对照_20261109",
+      "archive_bytes": 74399056,
+      "archive_sha256": "aa361ec6fa753516262d071db08feef677985c6ed62200e1bcd47264c98de744",
+      "unpacked_bytes": 120443907,
+      "entries": 1356,
+      "parts": [
+        {
+          "asset": "04-simulation-demo.zip",
+          "bytes": 74399056,
+          "sha256": "aa361ec6fa753516262d071db08feef677985c6ed62200e1bcd47264c98de744"
+        }
+      ]
+    },
+    {
+      "id": "navigation",
+      "archive_relative": "05-navigation-and-extras.zip",
+      "extract_into": "",
+      "top_directory": "",
+      "archive_bytes": 26948688,
+      "archive_sha256": "5ff1ba9d6ba751b8758358db16e085a186f3fac0a7b16986f5edc45edeedf089",
+      "unpacked_bytes": 41778895,
+      "entries": 855,
+      "parts": [
+        {
+          "asset": "05-navigation-and-extras.zip",
+          "bytes": 26948688,
+          "sha256": "5ff1ba9d6ba751b8758358db16e085a186f3fac0a7b16986f5edc45edeedf089"
+        }
+      ]
+    }
+  ],
+  "hardware_autostart": false,
+  "simulation_cases": 78,
+  "current_videos": 20,
+  "historical_video_files": 65,
+  "download_bytes": 6964213728,
+  "unpacked_bytes": 16527666917,
+  "estimated_free_bytes_for_install": 32603578021
+}
