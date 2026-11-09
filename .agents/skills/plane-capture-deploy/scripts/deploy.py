@@ -1,10 +1,12 @@
 """Verified private-release deployment. Python standard library only; no hardware I/O."""
 from pathlib import Path, PurePosixPath
-import argparse,datetime,hashlib,json,os,shutil,subprocess,sys,time,urllib.request,urllib.error,urllib.parse,zipfile,zlib
+import argparse,datetime,hashlib,json,os,shutil,subprocess,sys,time,urllib.request,urllib.error,urllib.parse,zipfile,zlib,concurrent.futures,threading
 REPO_ROOT=Path(__file__).resolve().parents[4]
 API='https://api.github.com'
 
-def say(**data):print(json.dumps(data,ensure_ascii=False),flush=True)
+PRINT_LOCK=threading.Lock()
+def say(**data):
+ with PRINT_LOCK:print(json.dumps(data,ensure_ascii=False),flush=True)
 def digest(path):
  h=hashlib.sha256()
  with open(path,'rb') as f:
@@ -71,7 +73,7 @@ def asset_download(github,repo,asset_map,part,cache,offline):
    with github.open(API+'/repos/'+repo+'/releases/assets/'+str(item['id']),binary=True) as r,temp.open('wb') as out:
     while block:=r.read(1024**2):
      out.write(block);h.update(block);count+=len(block)
-     if count-last>=64*1024**2:say(downloading=part['asset'],MiB=round(count/1024**2),total_MiB=round(part['bytes']/1024**2),MiB_s=round(count/1024**2/max(time.monotonic()-started,.01),2));last=count
+     if count-last>=8*1024**2:say(downloading=part['asset'],MiB=round(count/1024**2),total_MiB=round(part['bytes']/1024**2),MiB_s=round(count/1024**2/max(time.monotonic()-started,.01),2));last=count
    if count!=part['bytes'] or h.hexdigest()!=part['sha256']:raise RuntimeError('下载校验失败：'+part['asset'])
    temp.replace(target);return target
   except Exception:
@@ -111,8 +113,21 @@ def extract(component,archive,target):
    if done%10000==0:say(extracting=component['id'],files=done,total=component['entries'])
  return done
 
+def configure_local_paths(target,m):
+ rel='01_控制地面站/地面站_v31.2_OSD完整程序/station/settings.json';file=target/rel;record_path=target/'_deployment/local_overrides.json'
+ records=json.loads(record_path.read_text('utf-8')) if record_path.exists() else {}
+ if rel in records:return
+ c=next(x for x in m['components'] if x['id']=='control')
+ with zipfile.ZipFile(target/c['archive_relative']) as z:original=z.read(c['top_directory']+'/station/settings.json')
+ current=file.read_bytes()
+ if current!=original:raise RuntimeError('部署前发现已修改的station/settings.json；请先确认现有配置，未覆盖。')
+ settings=json.loads(current.decode('utf-8-sig'));old=settings.get('data_directory');settings['data_directory']=str(target/'运行记录/地面站_v31_2')
+ new=(json.dumps(settings,ensure_ascii=False,indent=2)+'\n').encode('utf-8');file.write_bytes(new)
+ records[rel]=dict(reason='Recipient-selected local data directory; explicitly mutable in DELIVERY_MANIFEST.json',field='data_directory',original_value=old,new_value=settings['data_directory'],original_sha256=hashlib.sha256(original).hexdigest(),local_sha256=hashlib.sha256(new).hexdigest(),local_bytes=len(new),local_crc32=zlib.crc32(new))
+ dump(record_path,records);say(configured_local_data_directory=settings['data_directory'])
+
 def verify(target,m,deep=True):
- failed=[];count=0
+ failed=[];count=0;override_path=target/'_deployment/local_overrides.json';overrides=json.loads(override_path.read_text('utf-8')) if override_path.exists() else {}
  for c in m['components']:
   arc=target/c['archive_relative']
   if not arc.exists() or digest(arc)!=c['archive_sha256']:failed.append(c['id']+': archive hash');continue
@@ -121,14 +136,16 @@ def verify(target,m,deep=True):
     if info.is_dir():continue
     f=safe_member(target/c['extract_into'],info.filename);count+=1
     try:
-     if os.stat(longpath(f)).st_size!=info.file_size:failed.append(info.filename+': size');continue
+     change=overrides.get(f.relative_to(target).as_posix());expected_size=change['local_bytes'] if change else info.file_size;expected_crc=change['local_crc32'] if change else info.CRC
+     if change and digest(longpath(f))!=change['local_sha256']:failed.append(info.filename+': local override hash');continue
+     if os.stat(longpath(f)).st_size!=expected_size:failed.append(info.filename+': size');continue
      if deep:
       crc=0
       with open(longpath(f),'rb') as src:
        while b:=src.read(4*1024**2):crc=zlib.crc32(b,crc)
-      if crc!=info.CRC:failed.append(info.filename+': CRC')
+      if crc!=expected_crc:failed.append(info.filename+': CRC')
     except FileNotFoundError:failed.append(info.filename+': missing')
- report=dict(checked_files=count,failed=failed,deep_crc=deep,hardware_connections=0);dump(target/'_deployment/verification.json',report);say(verification=report)
+ report=dict(checked_files=count,failed=failed,deep_crc=deep,local_config_overrides=len(overrides),hardware_connections=0);dump(target/'_deployment/verification.json',report);say(verification=report)
  if failed:raise RuntimeError('部署文件校验失败')
  return report
 
@@ -147,10 +164,17 @@ def install(target,cache,offline,m):
  if not offline:
   gh=Github(credential());repo=gh.json(API+'/repos/'+m['repository'])
   if not repo.get('private'):raise RuntimeError('仓库可见性不是private，停止以便核查。')
-  release=gh.json(API+'/repos/'+m['repository']+'/releases/tags/'+m['release_tag']);assets={x['name']:x for x in release['assets']}
+  release=gh.json(API+'/repos/'+m['repository']+'/releases/tags/'+m['release_tag']);page=1
+  while True:
+   batch=gh.json(API+'/repos/'+m['repository']+'/releases/'+str(release['id'])+'/assets?per_page=100&page='+str(page));assets.update({x['name']:x for x in batch})
+   if len(batch)<100:break
+   page+=1
  for c in m['components']:
   if c['id'] in state['completed']:continue
-  parts=[asset_download(gh,m['repository'],assets,p,cache,offline) for p in c['parts']];archive=assemble(c,parts,target);n=extract(c,archive,target);state['completed'].append(c['id']);dump(state_path,state);say(installed=c['id'],files=n)
+  with concurrent.futures.ThreadPoolExecutor(max_workers=min(8,len(c['parts']))) as pool:
+   parts=list(pool.map(lambda part:asset_download(Github(gh.token) if gh else None,m['repository'],assets,part,cache,offline),c['parts']))
+  archive=assemble(c,parts,target);n=extract(c,archive,target);state['completed'].append(c['id']);dump(state_path,state);say(installed=c['id'],files=n)
+ configure_local_paths(target,m)
  verify(target,m,deep=False)
  station=target/'01_控制地面站/地面站_v31.2_OSD完整程序';python=station/'python/python.exe'
  cmd=[str(python),'-B','-X','utf8',str(station/'tools/station_cli.py'),'replay','--no-browser'];p=subprocess.run(cmd,capture_output=True,text=True,encoding='utf-8',timeout=45)
