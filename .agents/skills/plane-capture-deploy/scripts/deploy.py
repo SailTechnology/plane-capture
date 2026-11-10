@@ -1,8 +1,7 @@
-"""Verified private-release deployment. Python standard library only; no hardware I/O."""
+"""Verified public-release deployment. Python standard library only; no hardware I/O."""
 from pathlib import Path, PurePosixPath
-import argparse,datetime,hashlib,json,os,shutil,subprocess,sys,time,urllib.request,urllib.error,urllib.parse,zipfile,zlib,concurrent.futures,threading
+import argparse,datetime,hashlib,json,os,re,shutil,subprocess,sys,time,urllib.request,urllib.error,urllib.parse,zipfile,zlib,concurrent.futures,threading
 REPO_ROOT=Path(__file__).resolve().parents[4]
-API='https://api.github.com'
 
 PRINT_LOCK=threading.Lock()
 def say(**data):
@@ -19,20 +18,6 @@ def longpath(path):
  if os.name!='nt' or p.startswith('\\\\?\\'):return p
  return '\\\\?\\UNC\\'+p[2:] if p.startswith('\\\\') else '\\\\?\\'+p
 
-def credential():
- token=os.environ.get('GH_TOKEN') or os.environ.get('GITHUB_TOKEN')
- if token:return token
- if shutil.which('gh'):
-  p=subprocess.run(['gh','auth','token'],capture_output=True,text=True,timeout=20)
-  if p.returncode==0 and p.stdout.strip():return p.stdout.strip()
- if shutil.which('git'):
-  env=os.environ.copy();env['GIT_TERMINAL_PROMPT']='0';env['GCM_INTERACTIVE']='never'
-  p=subprocess.run(['git','credential','fill'],input='protocol=https\nhost=github.com\n\n',text=True,capture_output=True,env=env,timeout=30)
-  if p.returncode==0:
-   c=dict(x.split('=',1) for x in p.stdout.splitlines() if '=' in x)
-   if c.get('password'):return c['password']
- raise RuntimeError('未找到当前用户的GitHub授权。先用 gh auth login 或 Git Credential Manager 登录已获授权的账号，再重试。')
-
 class SafeRedirect(urllib.request.HTTPRedirectHandler):
  def redirect_request(self,req,fp,code,msg,headers,newurl):
   parsed=urllib.parse.urlparse(newurl)
@@ -43,34 +28,43 @@ class SafeRedirect(urllib.request.HTTPRedirectHandler):
   return new
 
 class Github:
- def __init__(self,token):self.token=token;self.opener=urllib.request.build_opener(SafeRedirect())
+ def __init__(self):self.opener=urllib.request.build_opener(SafeRedirect())
  def open(self,url,binary=False):
-  headers={'User-Agent':'PlaneCapture-Private-Deploy/1','Accept':'application/octet-stream' if binary else 'application/vnd.github+json','Authorization':'Bearer '+self.token,'X-GitHub-Api-Version':'2022-11-28'}
+  headers={'User-Agent':'PlaneCapture-Public-Deploy/1','Accept':'application/octet-stream' if binary else 'application/vnd.github+json'}
   try:return self.opener.open(urllib.request.Request(url,headers=headers),timeout=120)
-  except urllib.error.HTTPError as e:raise RuntimeError('GitHub HTTP '+str(e.code)+'；请核对仓库访问权、Release版本和网络。') from None
- def json(self,url):
-  with self.open(url) as r:return json.load(r)
+  except urllib.error.HTTPError as e:raise RuntimeError('GitHub HTTP '+str(e.code)+'；请核对公开版本和网络。') from None
+
+def public_asset_url(repo,tag,name):
+ if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repo):raise ValueError('无效的GitHub仓库名')
+ if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*',tag):raise ValueError('无效的Release标签')
+ if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*',name):raise ValueError('无效的附件名')
+ return 'https://github.com/'+repo+'/releases/download/'+urllib.parse.quote(tag,safe='')+'/'+urllib.parse.quote(name,safe='')
 
 def validate_manifest(m):
  if m.get('schema_version')!=1:raise RuntimeError('不支持的部署清单版本')
+ seen=set()
  for c in m['components']:
   for key in ['archive_relative','extract_into']:
-   p=PurePosixPath(c[key]);assert not p.is_absolute() and '..' not in p.parts and ':' not in c[key] and '\\' not in c[key]
-  for p in c['parts']:assert p['asset']==Path(p['asset']).name and len(p['sha256'])==64
+   p=PurePosixPath(c[key])
+   if p.is_absolute() or '..' in p.parts or ':' in c[key] or '\\' in c[key]:raise ValueError('部署目录越界')
+  if not c['parts']:raise ValueError('组件没有附件分卷')
+  for p in c['parts']:
+   public_asset_url(m['repository'],m['release_tag'],p['asset'])
+   if p['asset'] in seen or not isinstance(p['bytes'],int) or p['bytes']<=0 or not re.fullmatch(r'[0-9a-f]{64}',p['sha256']):raise ValueError('附件清单无效')
+   seen.add(p['asset'])
 
-def asset_download(github,repo,asset_map,part,cache,offline):
+def asset_download(github,repo,tag,part,cache,offline):
  target=cache/part['asset'];source=(offline/part['asset']) if offline else target
  if source.exists():
   if source.stat().st_size==part['bytes'] and digest(source)==part['sha256']:return source
   raise RuntimeError('已有文件校验失败：'+str(source)+'；请另选空缓存目录重新下载。')
  if offline:raise FileNotFoundError('离线附件缺失：'+str(source))
- item=asset_map.get(part['asset'])
- if not item or item['size']!=part['bytes']:raise RuntimeError('Release附件缺失或大小不符：'+part['asset'])
+ url=public_asset_url(repo,tag,part['asset'])
  temp=cache/(part['asset']+'.partial')
  for attempt in range(1,4):
   try:
    started=time.monotonic();h=hashlib.sha256();count=0;last=0
-   with github.open(API+'/repos/'+repo+'/releases/assets/'+str(item['id']),binary=True) as r,temp.open('wb') as out:
+   with github.open(url,binary=True) as r,temp.open('wb') as out:
     while block:=r.read(1024**2):
      out.write(block);h.update(block);count+=len(block)
      if count-last>=8*1024**2:say(downloading=part['asset'],MiB=round(count/1024**2),total_MiB=round(part['bytes']/1024**2),MiB_s=round(count/1024**2/max(time.monotonic()-started,.01),2));last=count
@@ -160,19 +154,11 @@ def install(target,cache,offline,m):
  free=shutil.disk_usage(ancestor).free
  if not state['completed'] and free<m['estimated_free_bytes_for_install']:raise RuntimeError(f'目标磁盘空间不足；本版本建议至少{m["estimated_free_bytes_for_install"]/1024**3:.1f} GiB可用空间。')
  target.mkdir(parents=True,exist_ok=True);cache.mkdir(parents=True,exist_ok=True);dump(state_path,state)
- gh=None;assets={}
- if not offline:
-  gh=Github(credential());repo=gh.json(API+'/repos/'+m['repository'])
-  if not repo.get('private'):raise RuntimeError('仓库可见性不是private，停止以便核查。')
-  release=gh.json(API+'/repos/'+m['repository']+'/releases/tags/'+m['release_tag']);page=1
-  while True:
-   batch=gh.json(API+'/repos/'+m['repository']+'/releases/'+str(release['id'])+'/assets?per_page=100&page='+str(page));assets.update({x['name']:x for x in batch})
-   if len(batch)<100:break
-   page+=1
+ gh=Github() if not offline else None
  for c in m['components']:
   if c['id'] in state['completed']:continue
   with concurrent.futures.ThreadPoolExecutor(max_workers=min(8,len(c['parts']))) as pool:
-   parts=list(pool.map(lambda part:asset_download(Github(gh.token) if gh else None,m['repository'],assets,part,cache,offline),c['parts']))
+   parts=list(pool.map(lambda part:asset_download(gh,m['repository'],m['release_tag'],part,cache,offline),c['parts']))
   archive=assemble(c,parts,target);n=extract(c,archive,target);state['completed'].append(c['id']);dump(state_path,state);say(installed=c['id'],files=n)
  configure_local_paths(target,m)
  verify(target,m,deep=False)

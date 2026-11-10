@@ -1,6 +1,6 @@
 interface:
   display_name: "飞机捕获一键部署"
   short_description: "下载并校验完整交付包，配置离线运行环境和仿真资料入口"
-  default_prompt: "使用 $plane-capture-deploy 将这个私有工程部署到我指定的目录，并检查三个分类包和仿真视频入口。"
+  default_prompt: "使用 $plane-capture-deploy 将飞机捕获工程部署到我指定的目录，并检查三个分类包和仿真视频入口。"
 policy:
   allow_implicit_invocation: true

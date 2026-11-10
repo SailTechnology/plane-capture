@@ -1,5 +1,5 @@
 from pathlib import Path
-import unittest,tempfile,os,json,hashlib,zipfile,urllib.request,importlib.util
+import unittest,tempfile,os,json,hashlib,io,zipfile,urllib.request,importlib.util
 ROOT=Path(__file__).resolve().parents[1];spec=importlib.util.spec_from_file_location('deployment',ROOT/'.agents/skills/plane-capture-deploy/scripts/deploy.py');d=importlib.util.module_from_spec(spec);spec.loader.exec_module(d)
 
 class DeploymentBehavior(unittest.TestCase):
@@ -23,8 +23,25 @@ class DeploymentBehavior(unittest.TestCase):
  def test_bad_offline_asset_stops_before_extraction(self):
   assets=self.work/'bad_assets';assets.mkdir();f=assets/'part001';f.write_bytes(b'wrong')
   part={'asset':f.name,'bytes':5,'sha256':hashlib.sha256(b'right').hexdigest()}
-  with self.assertRaises(RuntimeError):d.asset_download(None,'test/repo',{},part,self.work/'cache',assets)
+  with self.assertRaises(RuntimeError):d.asset_download(None,'test/repo','v1',part,self.work/'cache',assets)
   self.assertEqual(f.read_bytes(),b'wrong')
+ def test_public_download_uses_release_url_without_login(self):
+  data=b'public release part';cache=self.work/'public_cache';cache.mkdir()
+  part={'asset':'part001.zip','bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}
+  class Client:
+   def __init__(self):self.urls=[]
+   def open(self,url,binary=False):self.urls.append((url,binary));return io.BytesIO(data)
+  client=Client();result=d.asset_download(client,'test/repo','v1',part,cache,None)
+  self.assertEqual(result.read_bytes(),data)
+  self.assertEqual(client.urls,[('https://github.com/test/repo/releases/download/v1/part001.zip',True)])
+ def test_public_client_never_sends_authorization(self):
+  class Opener:
+   def open(self,request,timeout):self.request=request;return io.BytesIO(b'ok')
+  client=d.Github();client.opener=Opener();client.open('https://github.com/test/repo/releases/download/v1/part001.zip',binary=True)
+  self.assertIsNone(client.opener.request.get_header('Authorization'))
+ def test_manifest_rejects_invalid_public_asset_paths(self):
+  with self.assertRaises(ValueError):d.public_asset_url('test/repo','v1','../other.zip')
+  with self.assertRaises(ValueError):d.public_asset_url('test/repo/extra','v1','part001.zip')
  def test_ordered_join_requires_full_hash(self):
   a=self.work/'a';b=self.work/'b';a.write_bytes(b'abc');b.write_bytes(b'def');target=self.work/'join';target.mkdir()
   c={'id':'test','archive_relative':'joined.zip','archive_bytes':6,'archive_sha256':hashlib.sha256(b'abcdef').hexdigest()}

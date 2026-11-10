@@ -1,25 +1,25 @@
-# 飞机捕获 · 私有交付与 AI 部署
+# 飞机捕获 · 公开交付与 DSH 部署
 
-本仓库提供可调用的部署 skill、校验清单和 Windows 引导运行环境。完整控制源码、机械原生文件、仿真和过程资料保存在同一私有仓库的 Release 附件中。
+本仓库提供可调用的部署 skill、校验清单和 Windows 引导运行环境。完整控制源码、机械原生文件、仿真和过程资料保存在本仓库的公开 Release 附件中。
 
 当前版本：v2026.11.09。完整下载约6.49 GiB；含下载缓存、分卷合并和解压，建议目标磁盘至少预留31 GiB。运行和安装过程不自动连接或驱动真实设备。
 
-## 授权与获取
+## 获取工程
 
-仓库和 Release 均为 private。先由所有者在仓库 Settings → Collaborators 中添加指定 GitHub 账号，再由接收者用自己的账号登录。没有授权时访问通常显示404；不要把它误认为公开下载地址失效。
+仓库和 Release 已公开，无需 GitHub 账号或令牌。使用当前 main 分支获取部署工具：
 
     git clone https://github.com/SailTechnology/plane-capture.git
     cd plane-capture
 
-Git Credential Manager 或 gh auth 的现有登录可用于下载。无需作者令牌，不要在聊天、脚本或提交中分享凭据。
+没有 Git 时，可从仓库首页的 Code → Download ZIP 下载 main 分支，解压后在 DSH 中打开该目录。main 源码 ZIP 只包含部署工具，完整资料由安装脚本从 Release 下载。Release 页的 Source code 对应历史标签，请不要用它替代当前 main 部署工具。
 
 ## 让 AI 部署
 
-在 Codex 或兼容 Agent Skills 的 AI 中打开克隆后的仓库，发送：
+在 DeepSeek Harness（DSH）中打开克隆或解压后的仓库，发送：
 
-> 使用 $plane-capture-deploy，把完整工程部署到我指定的目录，并校验控制、机械、研究资料和全部仿真视频入口。只做软件部署。
+> 请读取 .agents/skills/plane-capture-deploy/SKILL.md，使用 plane-capture-deploy 将完整飞机捕获工程部署到我指定的空目录，并校验控制、机械、研究资料和仿真视频入口。只做软件部署，不连接机械臂或相机。
 
-仓库级 skill 位于 .agents/skills/plane-capture-deploy，SKILL.md 和脚本均随源码提供。其他 AI 可直接读取该文件执行同样流程。
+仓库级 skill 位于 .agents/skills/plane-capture-deploy，DSH 支持这一项目级目录。详细步骤、没有 Git 时的下载方式和故障处理见 [DSH部署教程](docs/DSH部署教程.md)。其他支持 Agent Skills 的 AI 也可读取该文件执行同样流程。
 
 ## 直接部署
 
@@ -56,6 +56,5 @@ Git Credential Manager 或 gh auth 的现有登录可用于下载。无需作者
 delivery/manifest.json 固定 Release 和各附件的 SHA256。研究原件的逐文件来源清单位于过程资料包。Python引导环境的许可证在runtime/python/LICENSE.txt；完整第三方材料随各交付包保留，不授予超出原许可的权利。
 
 官方说明：
-- Codex仓库级skills：https://developers.openai.com/codex/skills
-- GitHub私有仓库：https://docs.github.com/en/repositories/creating-and-managing-repositories/about-repositories
+- DSH项目级skills：https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/subsystems/skills.md
 - GitHub发布附件：https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases
