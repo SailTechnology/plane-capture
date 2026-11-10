@@ -2,11 +2,13 @@
 
 本仓库提供可调用的部署 skill、校验清单和 Windows 引导运行环境。完整控制源码、机械原生文件、仿真和过程资料保存在本仓库的公开 Release 附件中。
 
-当前版本：v2026.11.09。完整下载约6.49 GiB；含下载缓存、分卷合并和解压，建议目标磁盘至少预留31 GiB。运行和安装过程不自动连接或驱动真实设备。
+当前版本：v2026.11.09。完整下载约6.49 GiB；含下载缓存、分卷合并和解压，建议目标磁盘至少预留32 GiB。运行和安装过程不自动连接或驱动真实设备。
 
 ## 获取工程
 
-仓库和 Release 已公开，无需 GitHub 账号或令牌。使用当前 main 分支获取部署工具：
+仓库和 Release 已公开，无需 GitHub 账号或令牌。可直接下载 [DSH 部署工具包](https://github.com/SailTechnology/plane-capture/releases/download/v2026.11.09/plane-capture-dsh-setup-20261110.zip)，解压后在 DSH 中打开该目录。工具包不含完整资料，安装时会从 Release 下载。
+
+也可使用当前 main 分支获取部署工具：
 
     git clone https://github.com/SailTechnology/plane-capture.git
     cd plane-capture

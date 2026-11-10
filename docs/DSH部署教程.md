@@ -8,15 +8,17 @@
 
 ## 已安装 DSH
 
-1. 下载部署工具。可以在 PowerShell 运行以下命令，H 盘不存在时把路径换成自己的工作目录：
+1. 下载 [DSH 部署工具包（ZIP）](https://github.com/SailTechnology/plane-capture/releases/download/v2026.11.09/plane-capture-dsh-setup-20261110.zip)，解压到自己的工作目录。这个压缩包只含部署工具；完整资料由后续步骤自动下载。
+
+   也可以使用 Git，在 PowerShell 运行以下命令；H 盘不存在时把路径换成自己的工作目录：
 
    ```powershell
    git clone https://github.com/SailTechnology/plane-capture.git H:\Projects\plane-capture
    ```
 
-   没有 Git 时，打开[仓库首页](https://github.com/SailTechnology/plane-capture)，选择 **Code → Download ZIP**，解压得到 main 分支的部署工具。
+   也可打开[仓库首页](https://github.com/SailTechnology/plane-capture)，选择 **Code → Download ZIP**，解压得到 main 分支的部署工具。
 
-2. 在 DSH 中把刚克隆或解压的 `plane-capture` 目录设为当前工作区。打开一个新会话，将下面这段话发给 DSH：
+2. 在 DSH 中把刚克隆或解压的部署工具目录设为当前工作区。打开一个新会话，将下面这段话发给 DSH：
 
    > 请读取本目录的 `.agents/skills/plane-capture-deploy/SKILL.md`，使用 plane-capture-deploy 部署完整飞机捕获工程。先检查可用磁盘空间，询问或使用我指定的空目录；自动下载并校验 Release 分卷、合并和解压。完成后给我控制、机械、研究资料和全部仿真视频的入口。只做软件部署，不连接机械臂或相机。
 
@@ -26,10 +28,9 @@
 
 ## 还没有安装 DSH
 
-已安装 DSH 桌面版的用户无需额外安装 Node.js。使用命令行启动 DSH Web 版时，请先安装 Node.js 和 Git；截至本教程更新，官方 `@deepseek-ai/dsh` 的 npm 版本要求 Node.js 24.9.0 或更高，具体以 [DSH 官方包信息](https://www.npmjs.com/package/@deepseek-ai/dsh)为准。然后在部署工具目录执行：
+已安装 DSH 桌面版的用户无需额外安装 Node.js。使用命令行启动 DSH Web 版时，请先安装 Node.js；截至本教程更新，官方 `@deepseek-ai/dsh` 的 npm 版本要求 Node.js 24.9.0 或更高，具体以 [DSH 官方包信息](https://www.npmjs.com/package/@deepseek-ai/dsh)为准。然后在部署工具目录执行：
 
 ```powershell
-cd H:\Projects\plane-capture
 npx -y @deepseek-ai/dsh web
 ```
 
@@ -49,6 +50,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\.agents\skills\plane-captu
 
 ## 注意版本入口
 
-请从仓库的 **main 分支**克隆或使用 Code → Download ZIP 获取最新版部署工具。Release 页中的 **Source code** 是对应历史标签的旧工具，可能仍要求私有仓库授权。Release 的数据附件仍是完整资料，最新版部署工具会自动选择并校验它们。
+请使用上面的 DSH 部署工具包，或从仓库的 **main 分支**获取部署工具。Release 页中的 **Source code** 是对应历史标签的旧工具，可能仍要求私有仓库授权。Release 的数据附件仍是完整资料，部署工具会自动选择并校验它们。
 
 已有设备标定、相机名称和串口属于原设备。部署完成只证明软件和离线入口可用，不代表机械臂已通过实机联动、带载闭合或飞机捕获验证。
